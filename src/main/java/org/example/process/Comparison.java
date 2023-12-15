@@ -34,7 +34,5 @@ public class Comparison {
       algorithm.solve();
       endTime = System.currentTimeMillis();
       System.out.println(out +(endTime-startTime));
-
-
    }
 }

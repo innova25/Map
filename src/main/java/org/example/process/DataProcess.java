@@ -26,11 +26,19 @@ public class DataProcess {
     private final List<Edge> edges = new ArrayList<>();
     private final List<Vertical> outline = new ArrayList<>();
 
-
+    double[] xPolygon;
+    double[] yPolygon;
     public DataProcess() throws IOException {
         readVertical();
         readEdges();
         readOutline();
+       int N = outline.size();
+        xPolygon = new double[N];
+        yPolygon = new double[N];
+        for (int i = 0; i < N; ++i) {
+            xPolygon[i] = outline.get(i).getX();
+            yPolygon[i] = outline.get(i).getY();
+        }
     }
 
     private void readVertical() throws IOException {
