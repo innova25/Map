@@ -5,11 +5,9 @@ import org.example.model.Input;
 import org.example.model.Vertical;
 @AllArgsConstructor
 public class OutPut {
-    private Input input;
-    private DataProcess dataProcess;
-    private AlgorithmName algorithmName;
 
-    public String getResult(){
+
+    public static String getResult(Input input, DataProcess dataProcess, AlgorithmName algorithmName){
         StringBuilder outPut = new StringBuilder();
         Algorithm algorithm = null;
         switch (algorithmName) {
@@ -24,7 +22,6 @@ public class OutPut {
             outPut.append(vertical.getX()).append(",").append(vertical.getY()).append("|");
         }
         outPut = new StringBuilder(outPut.substring(0, outPut.length() - 1));
-        System.out.println(outPut);
         return outPut.toString();
     }
 }

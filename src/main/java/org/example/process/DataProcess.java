@@ -19,9 +19,9 @@ import java.util.Map;
 
 @Getter
 public class DataProcess {
-    private static final String verticalFilePath = "src/main/resources/files/markers.xlsx";
-    private static final String edgeFilePath = "src/main/resources/files/edges.xlsx";
-    private static final String outlineFilePath = "src/main/resources/files/outline.xlsx";
+    private static final String verticalFilePath = "D:\\AI\\demo\\src\\main\\resources\\files\\markers.xlsx";
+    private static final String edgeFilePath = "D:\\AI\\demo\\src\\main\\resources\\files\\edges.xlsx";
+    private static final String outlineFilePath = "D:\\AI\\demo\\src\\main\\resources\\files\\outline.xlsx";
     private final Map<Integer, Vertical> labelMapper = new HashMap<>();
     private final List<Edge> edges = new ArrayList<>();
     private final List<Vertical> outline = new ArrayList<>();

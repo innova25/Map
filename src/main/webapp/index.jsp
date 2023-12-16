@@ -10,7 +10,7 @@
             height: 700px;
             width: 80%;
             float: right;
-            margin-right: 0px;
+            margin-right: 0;
             margin-top: 15px;
         }
 
@@ -68,6 +68,7 @@
             cursor: pointer;
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDyNLkGVhnKcMxxtDn9yTzjPrXxsqMq08k&callback=initMap" async defer></script>
     <script>
         var map;
@@ -75,7 +76,7 @@
         var infoWindow;
         var sourceCoordinates = null;
         var destinationCoordinates = null;
-
+        var path;
         function initMap() {
             var myLatLng = { lat: 21.031369, lng: 105.832756 };
             map = new google.maps.Map(document.getElementById('map'), {
@@ -91,22 +92,31 @@
 
             infoWindow = new google.maps.InfoWindow();
 
-            var r = ['21.031916,105.830775|21.031523,105.832145|21.031353,105.832746|21.031002,105.834029|21.031816,105.834199|21.031887,105.834202|21.031994,105.834187|21.034019,105.834596|21.033838,105.835619|21.034974,105.835861|21.034872,105.836461|21.034931,105.836708|21.034876,105.836764|21.034861,105.83685|21.034873,105.836919|21.034921,105.836976|21.035,105.836997|21.035052,105.836996|21.035615,105.837964|21.035705,105.838031'];
-            var coordinates = r[0].split("|");
-            var flightPlanCoordinates = new Array();
-            for (var i = 0; i < coordinates.length; i++) {
-                var point = new google.maps.LatLng(coordinates[i].split(',')[0], coordinates[i].split(',')[1]);
-                flightPlanCoordinates.push(point);
-            }
+            makeGetRequest().then(function (coordinatesString) {
+                var coordinatesArray = coordinatesString.split("|");
+                var outlineCoordinates = [];
 
-            var flightPath = new google.maps.Polyline({
-                path: flightPlanCoordinates,
-                geodesic: true,
-                strokeColor: '#FC6480',
-                strokeOpacity: 0.8,
-                strokeWeight: 10
+                for (var i = 0; i < coordinatesArray.length; i++) {
+                    var latLngComponents = coordinatesArray[i].split(',');
+                    var lat = parseFloat(latLngComponents[0]);
+                    var lng = parseFloat(latLngComponents[1]);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        var point = new google.maps.LatLng(lat, lng);
+                        outlineCoordinates.push(point);
+                    }
+                }
+
+                var outlinePath = new google.maps.Polyline({
+                    path: outlineCoordinates,
+                    geodesic: true,
+                    strokeColor: '#FC6480',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2
+                });
+
+                outlinePath.setMap(map);
             });
-            flightPath.setMap(map);
 
             google.maps.event.addListener(map, 'click', function(event) {
                 if (sourceCoordinates === null) {
@@ -136,7 +146,7 @@
             infoWindow.open(map, marker);
 
             // Set tọa độ vào thẻ input
-            document.getElementById('src').value = latitude + ', ' + longitude;
+            document.getElementById('src').value = latitude + ',' + longitude;
         }
 
         function setDestinationLocation(location) {
@@ -158,11 +168,77 @@
             infoWindow.open(map, marker);
 
             // Set tọa độ vào thẻ input
-            document.getElementById('dest').value = latitude + ', ' + longitude;
+            document.getElementById('dest').value = latitude + ',' + longitude;
+        }
+        function makeGetRequest() {
+            // Replace with your servlet URL and parameters
+            var servletUrl = 'http://localhost:8080/demo_war_exploded/DataServlet';
+
+            return fetch(servletUrl)
+                .then(response => response.text())
+                .catch(error => {
+                    // Handle any errors
+                    console.error('Error:', error);
+                });
+        }
+        function findPath(start, end, algorithm) {
+            return new Promise(function (resolve, reject) {
+                $.ajax({
+                    type: "POST",
+                    url: "http://localhost:8080/demo_war_exploded/DataServlet",
+                    data: { start: start, end: end, algorithm: algorithm },
+                    success: function (response) {
+                        var path = response.split(":");
+                        if (path[0] === "false") {
+                            resolve(""); // Empty string if the path is false
+                        } else {
+                            resolve(path[1]); // Resolve with the actual path
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        reject(errorThrown); // Reject with the error message
+                    }
+                });
+            });
         }
 
+        function drawPath() {
+            if(path) path.setMap(null);
+            findPath(document.getElementById('src').value.toString(), document.getElementById('dest').value.toString(), 'Dijkstra')
+                .then(function (result) {
+                    // Handle the result (the resolved value from the promise)
+                    var coordinatesArray = result.split("|");
+                    var pathCoordinates = [];
+
+                    for (var i = 0; i < coordinatesArray.length; i++) {
+                        var latLngComponents = coordinatesArray[i].split(',');
+                        var lat = parseFloat(latLngComponents[0]);
+                        var lng = parseFloat(latLngComponents[1]);
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            var point = new google.maps.LatLng(lat, lng);
+                            pathCoordinates.push(point);
+                        }
+                    }
+
+                    var path = new google.maps.Polyline({
+                        path: pathCoordinates,
+                        geodesic: true,
+                        strokeColor: '#FFFFFF',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 8
+                    });
+
+                    path.setMap(map);
+                })
+                .catch(function (error) {
+                    // Handle errors (the rejected value from the promise)
+                    console.error('Error:', error);
+                });
+        }
         function searchLocation() {
-            // Xử lý tìm kiếm địa điểm
+
+
         }
 
         function resetInputs() {
@@ -182,16 +258,16 @@
 <div style="width: 100%; display: flex;">
     <div style="display: block; margin-right: 10px; margin-left: 5px; margin-top: 10px;">
         <div style="display: flex;">
-            <input type="text" id="src" style="height: 25px;" placeholder="Đỉnh nguồn">
-            <button type="submit" for="src" onclick="searchLocation()">Xác nhận</button>
+            <label for="src"></label><input type="text" id="src" style="height: 25px;" placeholder="Start">
+            <button type="submit" form="src" onclick="searchLocation()">Confirm</button>
         </div>
 
         <div style="display: flex;">
-            <input type="text" id="dest" style="height: 25px;" placeholder="Đỉnh đích">
-            <button type="submit" for="dest" onclick="searchLocation()">Xác nhận</button>
+            <label for="dest"></label><input type="text" id="dest" style="height: 25px;" placeholder="Destination">
+            <button type="submit" form="dest" onclick="searchLocation()">Confirm</button>
         </div>
         <div style="display: flex; margin-top: 10px;">
-            <button style="margin-right: 8px;">Đường đi ngắn nhất</button>
+            <button onclick="drawPath()" style="margin-right: 8px;">Shortest Path</button>
             <button onclick="resetInputs()">Reset</button>
         </div>
     </div>
