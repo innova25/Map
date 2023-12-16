@@ -72,24 +72,23 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDyNLkGVhnKcMxxtDn9yTzjPrXxsqMq08k&callback=initMap" async defer></script>
     <script>
         var map;
-        var marker;
+        var sourcemarker
+        var destmarker
+        var marker
         var infoWindow;
-        var sourceCoordinates = null;
-        var destinationCoordinates = null;
+        var issourceCoordinates = false;
+        var isdestinationCoordinates = false;
         var path;
+
+       var startLine;
+       var endLine;
         function initMap() {
+
             var myLatLng = { lat: 21.031369, lng: 105.832756 };
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 16,
                 center: myLatLng
             });
-
-            marker = new google.maps.Marker({
-                position: myLatLng,
-                map: map,
-                title: 'This is the location!'
-            });
-
             infoWindow = new google.maps.InfoWindow();
 
             makeGetRequest().then(function (coordinatesString) {
@@ -117,21 +116,21 @@
 
                 outlinePath.setMap(map);
             });
-
+            document.getElementById("Dijkstra").checked = true;
             google.maps.event.addListener(map, 'click', function(event) {
-                if (sourceCoordinates === null) {
+                if (!issourceCoordinates && !isdestinationCoordinates) {
                     setSourceLocation(event.latLng);
-                } else {
+                } else if(issourceCoordinates && !isdestinationCoordinates) {
                     setDestinationLocation(event.latLng);
                 }
             });
         }
 
         function setSourceLocation(location) {
-            if (marker) {
-                marker.setMap(null);
+            if (sourcemarker) {
+                sourcemarker.setMap(null);
             }
-            marker = new google.maps.Marker({
+            sourcemarker = new google.maps.Marker({
                 position: location,
                 map: map,
                 icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
@@ -143,17 +142,17 @@
             var longitude = location.lng().toFixed(6);
 
             infoWindow.setContent('Source Latitude: ' + latitude + '<br>Source Longitude: ' + longitude);
-            infoWindow.open(map, marker);
+            infoWindow.open(map, sourcemarker);
 
             // Set tọa độ vào thẻ input
             document.getElementById('src').value = latitude + ',' + longitude;
         }
 
         function setDestinationLocation(location) {
-            if (marker) {
-                marker.setMap(null);
+            if (destmarker) {
+                destmarker.setMap(null);
             }
-            marker = new google.maps.Marker({
+            destmarker = new google.maps.Marker({
                 position: location,
                 map: map,
                 icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
@@ -165,7 +164,7 @@
             var longitude = location.lng().toFixed(6);
 
             infoWindow.setContent('Destination Latitude: ' + latitude + '<br>Destination Longitude: ' + longitude);
-            infoWindow.open(map, marker);
+            infoWindow.open(map, destmarker);
 
             // Set tọa độ vào thẻ input
             document.getElementById('dest').value = latitude + ',' + longitude;
@@ -177,7 +176,7 @@
             return fetch(servletUrl)
                 .then(response => response.text())
                 .catch(error => {
-                    // Handle any errors
+
                     console.error('Error:', error);
                 });
         }
@@ -190,6 +189,7 @@
                     success: function (response) {
                         var path = response.split(":");
                         if (path[0] === "false") {
+                            alert("Please choose coordinates again! Marker is out of area")
                             resolve(""); // Empty string if the path is false
                         } else {
                             resolve(path[1]); // Resolve with the actual path
@@ -203,13 +203,59 @@
         }
 
         function drawPath() {
-            if(path) path.setMap(null);
-            findPath(document.getElementById('src').value.toString(), document.getElementById('dest').value.toString(), 'Dijkstra')
+            if(path)path.setMap(null);
+            if(startLine)startLine.setMap(null);
+            if(endLine)endLine.setMap(null);
+            findPath(document.getElementById('src').value.toString(), document.getElementById('dest').value.toString(), document.querySelector('input[name="alg"]:checked').value.toString())
                 .then(function (result) {
                     // Handle the result (the resolved value from the promise)
                     var coordinatesArray = result.split("|");
                     var pathCoordinates = [];
+                    var startCoordinate = coordinatesArray[0].split(",");
+                    var endCoordinate = coordinatesArray[coordinatesArray.length-1].split(",");
+                    var startOfVertical = document.getElementById("src").value.toString().split(",");
+                    var endOfVertical = document.getElementById("dest").value.toString().split(",");
 
+                    startLine = new google.maps.Polyline({
+                        path:  [{lat:parseFloat(startOfVertical[0]),lng:parseFloat(startOfVertical[1])},
+                            {lat:parseFloat(startCoordinate[0]),lng:parseFloat(startCoordinate[1])}
+                        ],
+                        geodesic: true,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 2,
+                        icons: [{
+                            icon: {
+                                path: 'M 0,-1 0,1',
+                                strokeOpacity: 1,
+                                scale: 4
+                            },
+                            offset: '0',
+                            repeat: '20px'
+                        }]
+                    });
+
+                    endLine = new google.maps.Polyline({
+                        path: [{lat:parseFloat(endOfVertical[0]), lng:parseFloat(endOfVertical[1])},
+                            {lat:parseFloat(endCoordinate[0]), lng:parseFloat(endCoordinate[1])}
+                        ],
+                        geodesic: true,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 2,
+                        icons: [{
+                            icon: {
+                                path: 'M 0,-1 0,1',
+                                strokeOpacity: 1,
+                                scale: 4
+                            },
+                            offset: '0',
+                            repeat: '20px'
+                        }]
+                    });
+
+                    startLine.setMap(map);
+                    endLine.setMap(map);
                     for (var i = 0; i < coordinatesArray.length; i++) {
                         var latLngComponents = coordinatesArray[i].split(',');
                         var lat = parseFloat(latLngComponents[0]);
@@ -221,7 +267,7 @@
                         }
                     }
 
-                    var path = new google.maps.Polyline({
+                    path = new google.maps.Polyline({
                         path: pathCoordinates,
                         geodesic: true,
                         strokeColor: '#FFFFFF',
@@ -237,19 +283,26 @@
                 });
         }
         function searchLocation() {
-
-
+            if(!issourceCoordinates && !isdestinationCoordinates) issourceCoordinates=true;
+            else isdestinationCoordinates=true;
         }
 
         function resetInputs() {
             document.getElementById('src').value = '';
             document.getElementById('dest').value = '';
-            sourceCoordinates = null;
-            destinationCoordinates = null;
+            issourceCoordinates = false;
+            isdestinationCoordinates = false;
             if (marker) {
                 marker.setMap(null);
             }
+            if(sourcemarker) {
+                sourcemarker.setMap(null)
+            }
+            if(destmarker) {
+                destmarker.setMap(null)
+            }
         }
+
 
         google.maps.event.addDomListener(window, 'load', initMap);
     </script>
@@ -258,17 +311,28 @@
 <div style="width: 100%; display: flex;">
     <div style="display: block; margin-right: 10px; margin-left: 5px; margin-top: 10px;">
         <div style="display: flex;">
-            <label for="src"></label><input type="text" id="src" style="height: 25px;" placeholder="Start">
-            <button type="submit" form="src" onclick="searchLocation()">Confirm</button>
+            <label for="src"></label><input type="text" id="src" style="height: 40px;" placeholder="Start">
+            <button type="submit" form="src" onclick="searchLocation()" style="margin-left: 2px;">Confirm</button>
         </div>
 
         <div style="display: flex;">
-            <label for="dest"></label><input type="text" id="dest" style="height: 25px;" placeholder="Destination">
-            <button type="submit" form="dest" onclick="searchLocation()">Confirm</button>
+            <label for="dest"></label><input type="text" id="dest" style="height: 40px;" placeholder="Destination">
+            <button type="submit" form="dest" onclick="searchLocation()" style="margin-left: 2px;">Confirm</button>
         </div>
-        <div style="display: flex; margin-top: 10px;">
-            <button onclick="drawPath()" style="margin-right: 8px;">Shortest Path</button>
-            <button onclick="resetInputs()">Reset</button>
+        <div style="display: block; margin-top: 10px;">
+            <div style="display: block;">
+                <h3 style="margin-bottom: 2px; margin-left: 7px; font-weight: bold;">Select algorithm</h3>
+                <form id="algorithm" style="display: flex;">
+                    <input type="radio" id="A_star" name="alg" value="A*">
+                    <label for="A_star">A*</label><br>
+                    <input type="radio" id="Dijkstra" name="alg" value="Dijkstra">
+                    <label for="Dijkstra">Dijkstra</label><br>
+                </form>
+            </div>
+            <div style="margin-top: 8px;">
+                <button onclick="drawPath()" style="margin-right: 10px;height: 25px;">Shortest Path</button>
+                <button onclick="resetInputs()" style="height: 25px;">Reset</button>
+            </div>
         </div>
     </div>
 

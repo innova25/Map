@@ -47,7 +47,6 @@ public class HelloServlet extends HttpServlet {
             case "Dijkstra" -> response.append(OutPut.getResult(input,dataProcess, AlgorithmName.DIJKSTRA));
             case "A*" -> response.append(OutPut.getResult(input,dataProcess, AlgorithmName.A_STAR));
         }
-
         return response.toString();
     }
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
